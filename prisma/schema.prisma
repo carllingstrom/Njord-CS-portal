@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Note: SQLite doesn't support enums, so we use String fields with validation in the app layer
+// Valid UserRole values: CUSTOMER_USER, CUSTOMER_ADMIN, INTERNAL_ADMIN
+// Valid TicketStatus values: OPEN, IN_PROGRESS, RESOLVED, CLOSED
+// Valid TicketSeverity values: LOW, MEDIUM, HIGH
+
+model Organization {
+  id                  String   @id @default(cuid())
+  name                String
+  allowedEmailDomains String?
+  createdAt           DateTime @default(now())
+
+  users   User[]
+  articles KBArticle[] @relation("OrganizationArticles")
+  chats   Chat[]
+  tickets Ticket[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  role         String   @default("CUSTOMER_USER")
+  orgId        String?
+  magicLinkToken String?
+  magicLinkExpires DateTime?
+  createdAt    DateTime @default(now())
+
+  organization Organization? @relation(fields: [orgId], references: [id])
+  chats        Chat[]
+  tickets      Ticket[]
+
+  @@index([email])
+  @@index([orgId])
+}
+
+model KBArticle {
+  id          String   @id @default(cuid())
+  orgId       String?
+  title       String
+  category    String
+  tags        String?  // JSON array stored as string
+  symptoms    String?  @default("")
+  causes      String?  @default("")
+  steps       String   // Rich text content
+  videoUrl    String?  // URL to embedded video (YouTube, Vimeo, etc.)
+  videoEmbed  String?  // Full embed code if needed
+  published   Boolean  @default(true)
+  order       Int      @default(0) // For custom ordering
+  updatedAt   DateTime @default(now()) @updatedAt
+  createdAt   DateTime @default(now())
+
+  organization Organization? @relation("OrganizationArticles", fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([category])
+  @@index([published])
+  @@index([order])
+}
+
+model TroubleshootingFlow {
+  id         String   @id @default(cuid())
+  category   String
+  flowJson   String   // JSON string storing the decision tree
+  published  Boolean  @default(true)
+  updatedAt  DateTime @default(now()) @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@index([category])
+  @@index([published])
+}
+
+model Chat {
+  id           String   @id @default(cuid())
+  orgId        String
+  userId       String
+  messagesJson String   // JSON array of messages
+  resolvedFlag Boolean  @default(false)
+  escalatedFlag Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId])
+  @@index([userId])
+}
+
+model Ticket {
+  id          String   @id @default(cuid())
+  orgId       String
+  userId      String
+  category    String
+  severity    String
+  subject     String
+  description String
+  attachments String?  // JSON array of file paths
+  status      String   @default("OPEN")
+  chatSummary String?  // If escalated from chat
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([orgId])
+  @@index([userId])
+  @@index([status])
+}
+
