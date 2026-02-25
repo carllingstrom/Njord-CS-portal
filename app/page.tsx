@@ -136,14 +136,14 @@ export default async function HomePage({
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="min-h-screen bg-njord-subtle">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           {/* Hero Section with Search */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-njord-dark mb-4">
+          <div className="text-center mb-14">
+            <h1 className="text-4xl sm:text-5xl font-bold text-njord-dark mb-4 tracking-tight">
               How can we help you?
             </h1>
-            <p className="text-gray-900 mb-6 text-lg font-medium">
+            <p className="text-njord-muted text-lg mb-8 max-w-xl mx-auto">
               Search our knowledge base for solutions to common issues
             </p>
             <div className="max-w-2xl mx-auto">
@@ -153,7 +153,7 @@ export default async function HomePage({
 
           {/* Results Count */}
           {search && (
-            <div className="mb-4 text-sm text-gray-600">
+            <div className="mb-5 text-sm text-njord-muted font-medium">
               {articles.length === 0 ? (
                 <span>No articles found</span>
               ) : (
@@ -163,16 +163,24 @@ export default async function HomePage({
           )}
 
           {/* FAQ Items - Collapsible */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {articles.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-500">
+              <div className="bg-white rounded-xl shadow-card border border-gray-100 p-12 text-center">
                 {search ? (
                   <>
-                    <p className="mb-4">No articles found for &quot;{search}&quot;</p>
-                    <p className="text-sm">Try different keywords</p>
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent-pale flex items-center justify-center">
+                      <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-njord-dark font-medium mb-1">No articles found for &quot;{search}&quot;</p>
+                    <p className="text-njord-muted text-sm">Try different keywords or browse all articles</p>
+                    <a href="/" className="mt-4 inline-block text-accent hover:text-accent-hover font-medium text-sm transition-colors">
+                      View all articles →
+                    </a>
                   </>
                 ) : (
-                  <p>No articles available</p>
+                  <p className="text-njord-muted">No articles available</p>
                 )}
               </div>
             ) : (
@@ -184,11 +192,14 @@ export default async function HomePage({
 
           {/* Show "all articles" link if searching */}
           {search && articles.length > 0 && (
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center">
               <a
                 href="/"
-                className="text-accent hover:text-accent-hover font-medium transition-colors"
+                className="inline-flex items-center gap-2 text-accent hover:text-accent-hover font-medium transition-colors text-sm"
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
                 Clear search and show all articles
               </a>
             </div>

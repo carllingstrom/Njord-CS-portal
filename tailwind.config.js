@@ -10,12 +10,19 @@ module.exports = {
       colors: {
         // Dark blue tones (matching main website header)
         njord: {
-          dark: '#1E3A56', // Dark blue for headers and backgrounds
+          dark: '#1E3A56',
+          DEFAULT: '#2A4A6B',
+          light: '#3D5F82',
+          muted: '#5B7A9A',
+          pale: '#E8EEF4',
+          subtle: '#F4F7FA',
         },
         // Orange-brown accent (matching main website CTA)
         accent: {
-          DEFAULT: '#d97706', // Orange-brown for links/buttons
-          hover: '#b45309', // Darker on hover
+          DEFAULT: '#d97706',
+          hover: '#b45309',
+          light: '#f59e0b',
+          pale: '#FEF3E2',
         },
         // Keep primary for compatibility
         primary: {
@@ -30,6 +37,10 @@ module.exports = {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+      },
+      boxShadow: {
+        'card': '0 1px 3px 0 rgb(30 58 86 / 0.06), 0 1px 2px -1px rgb(30 58 86 / 0.06)',
+        'card-hover': '0 4px 6px -1px rgb(30 58 86 / 0.08), 0 2px 4px -2px rgb(30 58 86 / 0.06)',
       },
     },
   },

@@ -43,34 +43,34 @@ export default function FAQItem({ article }: FAQItemProps) {
   const embedUrl = getYouTubeEmbedUrl(article.videoUrl)
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-xl shadow-card border border-gray-100 overflow-hidden hover:shadow-card-hover hover:border-gray-200 transition-all duration-200">
       {/* Header - Always Visible */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-njord-pale/50 transition-colors"
       >
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-njord-dark mb-1">
             {article.title}
           </h3>
           {article.symptoms && !isOpen && (
-            <p className="text-sm text-gray-600 line-clamp-1">
-              <span className="font-medium">Symptoms:</span> {article.symptoms}
+            <p className="text-sm text-njord-muted line-clamp-1">
+              <span className="font-medium text-njord-dark">Symptoms:</span> {article.symptoms}
             </p>
           )}
           {tags.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">
               {tags.slice(0, 3).map((tag: string) => (
-                <span key={tag} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                <span key={tag} className="text-xs bg-accent-pale text-accent-hover px-2.5 py-1 rounded-md font-medium">
                   {tag}
                 </span>
               ))}
             </div>
           )}
         </div>
-        <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0 w-8 h-8 rounded-full bg-njord-pale flex items-center justify-center">
           <svg
-            className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+            className={`w-4 h-4 text-njord-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -82,28 +82,27 @@ export default function FAQItem({ article }: FAQItemProps) {
 
       {/* Content - Collapsible */}
       {isOpen && (
-        <div className="px-6 py-4 border-t border-gray-200 space-y-4">
-          {/* Symptoms */}
+        <div className="px-6 py-5 border-t border-gray-100 space-y-5 bg-njord-subtle/30">
           {/* Symptoms */}
           {article.symptoms && (
-            <div className="p-4 bg-njord-dark text-white rounded">
+            <div className="p-4 bg-njord-dark text-white rounded-lg">
               <h4 className="font-semibold text-white mb-2">Symptoms</h4>
-              <p className="text-white whitespace-pre-line text-sm opacity-90">{article.symptoms}</p>
+              <p className="text-white/90 whitespace-pre-line text-sm leading-relaxed">{article.symptoms}</p>
             </div>
           )}
 
           {/* Causes */}
           {article.causes && (
-            <div className="p-4 bg-njord-dark text-white rounded">
+            <div className="p-4 bg-njord-dark text-white rounded-lg">
               <h4 className="font-semibold text-white mb-2">Likely Causes</h4>
-              <p className="text-white whitespace-pre-line text-sm opacity-90">{article.causes}</p>
+              <p className="text-white/90 whitespace-pre-line text-sm leading-relaxed">{article.causes}</p>
             </div>
           )}
 
           {/* Video */}
           {(embedUrl || article.videoEmbed) && (
             <div className="rounded-lg overflow-hidden">
-              <h4 className="font-semibold text-gray-900 mb-2">Video Guide</h4>
+              <h4 className="font-semibold text-njord-dark mb-2">Video Guide</h4>
               {embedUrl ? (
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                   <iframe
@@ -125,10 +124,10 @@ export default function FAQItem({ article }: FAQItemProps) {
           )}
 
           {/* Steps */}
-          <div>
-            <h4 className="font-semibold text-njord-dark mb-2">Step-by-Step Fix</h4>
+          <div className="bg-white rounded-lg p-4 border border-gray-100">
+            <h4 className="font-semibold text-njord-dark mb-3">Step-by-Step Fix</h4>
             <div
-              className="prose max-w-none text-gray-900 text-sm"
+              className="prose prose-sm max-w-none text-njord-dark prose-headings:text-njord-dark prose-p:text-njord-muted prose-li:text-njord-muted"
               dangerouslySetInnerHTML={{ __html: article.steps.replace(/\n/g, '<br />') }}
             />
           </div>
