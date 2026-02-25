@@ -58,13 +58,13 @@ export default function AdminPage() {
     setLoading(true)
 
     try {
-      const url = editingId ? `/api/admin/articles/${editingId}` : '/api/admin/articles'
       const method = editingId ? 'PUT' : 'POST'
 
-      const res = await fetch(url, {
+      const res = await fetch('/api/admin/articles', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(editingId ? { id: editingId } : {}),
           ...formData,
           tags: formData.tags ? JSON.stringify(formData.tags.split(',').map((t) => t.trim())) : null,
         }),
@@ -119,8 +119,10 @@ export default function AdminPage() {
     if (!confirm('Are you sure you want to delete this article?')) return
 
     try {
-      const res = await fetch(`/api/admin/articles/${id}`, {
+      const res = await fetch('/api/admin/articles', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       })
 
       if (!res.ok) {

@@ -59,3 +59,68 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create article' }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const {
+      id,
+      title,
+      category,
+      tags,
+      symptoms,
+      causes,
+      steps,
+      videoUrl,
+      videoEmbed,
+      published,
+      order,
+    } = await request.json()
+
+    if (!id || !title || !category || !steps) {
+      return NextResponse.json(
+        { error: 'ID, title, category, and steps are required' },
+        { status: 400 }
+      )
+    }
+
+    const article = await prisma.kBArticle.update({
+      where: { id },
+      data: {
+        title,
+        category,
+        tags,
+        symptoms: symptoms || '',
+        causes: causes || '',
+        steps,
+        videoUrl: videoUrl || null,
+        videoEmbed: videoEmbed || null,
+        published: published !== false,
+        order: order || 0,
+      },
+    })
+
+    return NextResponse.json({ article })
+  } catch (error) {
+    console.error('Error updating article:', error)
+    return NextResponse.json({ error: 'Failed to update article' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+    }
+
+    await prisma.kBArticle.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting article:', error)
+    return NextResponse.json({ error: 'Failed to delete article' }, { status: 500 })
+  }
+}
