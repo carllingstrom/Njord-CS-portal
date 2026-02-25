@@ -1,9 +1,7 @@
-import { prisma } from '@/lib/prisma'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import FAQItem from '@/components/FAQItem'
-
-export const dynamic = 'force-dynamic'
+import { getPublishedArticles, Article } from '@/lib/articles'
 
 export default async function HomePage({
   searchParams,
@@ -11,128 +9,84 @@ export default async function HomePage({
   searchParams: { search?: string }
 }) {
   const search = searchParams.search?.trim().toLowerCase() || ''
+  const allArticles = getPublishedArticles()
 
-  let articles: any[] = []
+  let articles: Article[] = []
 
   if (search) {
-    // Split search into words for AND logic
     const searchWords = search.split(/\s+/).filter((w) => w.length > 0)
     const isMultiWord = searchWords.length > 1
 
-    // Build search conditions using AND logic for multi-word searches
-    const wordConditions: any[] = []
-    
-    searchWords.forEach((word) => {
-      wordConditions.push({
-        OR: [
-          { title: { contains: word } },
-          { symptoms: { contains: word } },
-          { causes: { contains: word } },
-          { steps: { contains: word } },
-        ],
-      })
-    })
-
-    // Fetch articles that match ALL words (AND logic)
-    const matchingArticles = await prisma.kBArticle.findMany({
-      where: {
-        published: true,
-        AND: wordConditions,
-      },
-      orderBy: { order: 'asc' },
-    })
-
-    // Score all matching articles by relevance
-    const scored = matchingArticles.map((article: any) => {
-      return {
-        ...article,
-        score: calculateRelevanceScore(article, search, searchWords),
-      }
-    })
-
-    const goodMatches = scored.filter((a: any) => a.score > 0)
-    
-    if (goodMatches.length > 0) {
-      articles = goodMatches.sort((a: any, b: any) => b.score - a.score)
-    } else if (isMultiWord) {
-      // Fallback to OR logic
-      const orConditions: any[] = []
-      searchWords.forEach((word) => {
-        orConditions.push(
-          { title: { contains: word } },
-          { symptoms: { contains: word } },
-          { causes: { contains: word } },
-          { steps: { contains: word } }
+    const matchesAllWords = (article: Article) =>
+      searchWords.every((word) => {
+        const w = word.toLowerCase()
+        return (
+          article.title.toLowerCase().includes(w) ||
+          article.symptoms.toLowerCase().includes(w) ||
+          article.causes.toLowerCase().includes(w) ||
+          article.steps.toLowerCase().includes(w) ||
+          article.tags.some((t) => t.toLowerCase().includes(w))
         )
       })
 
-      const orMatches = await prisma.kBArticle.findMany({
-        where: {
-          published: true,
-          OR: orConditions,
-        },
-        orderBy: { order: 'asc' },
+    const matchesAnyWord = (article: Article) =>
+      searchWords.some((word) => {
+        const w = word.toLowerCase()
+        return (
+          article.title.toLowerCase().includes(w) ||
+          article.symptoms.toLowerCase().includes(w) ||
+          article.causes.toLowerCase().includes(w) ||
+          article.steps.toLowerCase().includes(w) ||
+          article.tags.some((t) => t.toLowerCase().includes(w))
+        )
       })
 
-      const scoredOr = orMatches.map((article: any) => ({
-        ...article,
-        score: calculateRelevanceScore(article, search, searchWords),
+    const andMatches = allArticles.filter(matchesAllWords)
+
+    if (andMatches.length > 0) {
+      const scored = andMatches.map((a) => ({
+        ...a,
+        score: calculateRelevanceScore(a, search, searchWords),
       }))
-
-      articles = scoredOr
-        .filter((a: any) => a.score > 0)
-        .sort((a: any, b: any) => b.score - a.score)
-        .filter((article: any, index: number, self: any[]) => 
-          index === self.findIndex((a: any) => a.id === article.id)
-        )
+      articles = scored.sort((a, b) => b.score - a.score)
+    } else if (isMultiWord) {
+      const orMatches = allArticles.filter(matchesAnyWord)
+      const scored = orMatches.map((a) => ({
+        ...a,
+        score: calculateRelevanceScore(a, search, searchWords),
+      }))
+      articles = scored.filter((a) => a.score > 0).sort((a, b) => b.score - a.score)
     } else {
-      // Single word search - try synonyms
       const expandedTerms = expandSearchWithSynonyms(search)
-      const allSearchTerms = [search, ...expandedTerms.slice(0, 3)]
-      
-      const synonymWhere: any = {
-        published: true,
-        OR: [],
-      }
-      
-      allSearchTerms.forEach((term: string) => {
-        synonymWhere.OR.push(
-          { title: { contains: term } },
-          { symptoms: { contains: term } },
-          { causes: { contains: term } },
-          { steps: { contains: term } }
-        )
-      })
+      const allTerms = [search, ...expandedTerms.slice(0, 3)]
 
-      const synonymMatches = await prisma.kBArticle.findMany({
-        where: synonymWhere,
-        orderBy: { order: 'asc' },
-      })
+      const synonymMatches = allArticles.filter((article) =>
+        allTerms.some((term) => {
+          const t = term.toLowerCase()
+          return (
+            article.title.toLowerCase().includes(t) ||
+            article.symptoms.toLowerCase().includes(t) ||
+            article.causes.toLowerCase().includes(t) ||
+            article.steps.toLowerCase().includes(t) ||
+            article.tags.some((tag) => tag.toLowerCase().includes(t))
+          )
+        })
+      )
 
-      const scoredSyn = synonymMatches.map((article: any) => {
+      const scored = synonymMatches.map((article) => {
         const score = calculateRelevanceScore(article, search, [search])
-        const hasExactMatch = article.title.toLowerCase().includes(search) ||
-                             (article.symptoms || '').toLowerCase().includes(search) ||
-                             (article.causes || '').toLowerCase().includes(search) ||
-                             (article.steps || '').toLowerCase().includes(search)
+        const hasExactMatch =
+          article.title.toLowerCase().includes(search) ||
+          article.symptoms.toLowerCase().includes(search) ||
+          article.causes.toLowerCase().includes(search) ||
+          article.steps.toLowerCase().includes(search)
         return { ...article, score: hasExactMatch ? score : score * 0.5 }
       })
 
-      articles = scoredSyn
-        .filter((a: any) => a.score > 0)
-        .sort((a: any, b: any) => b.score - a.score)
-        .filter((article: any, index: number, self: any[]) => 
-          index === self.findIndex((a: any) => a.id === article.id)
-        )
+      articles = scored.filter((a) => a.score > 0).sort((a, b) => b.score - a.score)
     }
   } else {
-    // No search - show all articles in order
-    articles = await prisma.kBArticle.findMany({
-      where: {
-        published: true,
-      },
-      orderBy: { order: 'asc' },
-    })
+    articles = allArticles
   }
 
   return (
@@ -140,7 +94,6 @@ export default async function HomePage({
       <Navbar />
       <div className="min-h-screen bg-njord-subtle">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          {/* Hero Section with Search */}
           <div className="text-center mb-14">
             <h1 className="text-4xl sm:text-5xl font-bold text-njord-dark mb-4 tracking-tight">
               How can we help you?
@@ -153,7 +106,6 @@ export default async function HomePage({
             </div>
           </div>
 
-          {/* Results Count */}
           {search && (
             <div className="mb-5 text-sm text-njord-muted font-medium">
               {articles.length === 0 ? (
@@ -164,7 +116,6 @@ export default async function HomePage({
             </div>
           )}
 
-          {/* FAQ Items - Collapsible */}
           <div className="space-y-3">
             {articles.length === 0 ? (
               <div className="bg-white rounded-xl shadow-card border border-gray-100 p-12 text-center">
@@ -178,7 +129,7 @@ export default async function HomePage({
                     <p className="text-njord-dark font-medium mb-1">No articles found for &quot;{search}&quot;</p>
                     <p className="text-njord-muted text-sm">Try different keywords or browse all articles</p>
                     <a href="/" className="mt-4 inline-block text-accent hover:text-accent-hover font-medium text-sm transition-colors">
-                      View all articles →
+                      View all articles &rarr;
                     </a>
                   </>
                 ) : (
@@ -186,13 +137,12 @@ export default async function HomePage({
                 )}
               </div>
             ) : (
-              articles.map((article: any) => (
+              articles.map((article) => (
                 <FAQItem key={article.id} article={article} />
               ))
             )}
           </div>
 
-          {/* Show "all articles" link if searching */}
           {search && articles.length > 0 && (
             <div className="mt-8 text-center">
               <a
@@ -212,81 +162,60 @@ export default async function HomePage({
   )
 }
 
-// Calculate relevance score for an article based on search term
 function calculateRelevanceScore(
-  article: any,
+  article: Article,
   searchTerm: string,
-  searchWords?: string[]
+  searchWords: string[]
 ): number {
   let score = 0
   const searchLower = searchTerm.toLowerCase()
-  const title = (article.title || '').toLowerCase()
-  const symptoms = (article.symptoms || '').toLowerCase()
-  const causes = (article.causes || '').toLowerCase()
-  const steps = (article.steps || '').toLowerCase()
-  const allText = `${title} ${symptoms} ${causes} ${steps}`
+  const title = article.title.toLowerCase()
+  const symptoms = article.symptoms.toLowerCase()
+  const causes = article.causes.toLowerCase()
+  const steps = article.steps.toLowerCase()
+  const tagText = article.tags.join(' ').toLowerCase()
+  const allText = `${title} ${symptoms} ${causes} ${steps} ${tagText}`
 
-  const words = searchWords || searchLower.split(/\s+/).filter((w) => w.length > 0)
+  const words = searchWords
   const isMultiWord = words.length > 1
 
-  // 1. Exact phrase match - highest priority
   if (title.includes(searchLower)) score += 100
   if (symptoms.includes(searchLower)) score += 50
   if (causes.includes(searchLower)) score += 40
   if (steps.includes(searchLower)) score += 30
+  if (tagText.includes(searchLower)) score += 60
 
-  // 2. All words present (AND logic)
   if (isMultiWord) {
     const wordsInTitle = words.filter((word) => title.includes(word.toLowerCase())).length
-    const wordsInSymptoms = words.filter((word) => symptoms.includes(word.toLowerCase())).length
-    const wordsInCauses = words.filter((word) => causes.includes(word.toLowerCase())).length
-    const wordsInSteps = words.filter((word) => steps.includes(word.toLowerCase())).length
     const wordsInAll = words.filter((word) => allText.includes(word.toLowerCase())).length
 
-    if (wordsInTitle === words.length) {
-      score += 90
-    } else if (wordsInTitle > 0) {
-      score += 45 * (wordsInTitle / words.length)
-    }
+    if (wordsInTitle === words.length) score += 90
+    else if (wordsInTitle > 0) score += 45 * (wordsInTitle / words.length)
 
-    if (wordsInSymptoms === words.length) {
-      score += 60
-    } else if (wordsInSymptoms > 0) {
-      score += 30 * (wordsInSymptoms / words.length)
-    }
-
-    if (wordsInAll === words.length) {
-      score += 70
-    } else {
-      const matchRatio = wordsInAll / words.length
-      score += 35 * matchRatio
-    }
+    if (wordsInAll === words.length) score += 70
+    else score += 35 * (wordsInAll / words.length)
   }
 
-  // 3. Individual word matches
   words.forEach((word) => {
-    const wordLower = word.toLowerCase()
-    if (title.includes(wordLower)) score += 15
-    if (symptoms.includes(wordLower)) score += 8
-    if (causes.includes(wordLower)) score += 6
-    if (steps.includes(wordLower)) score += 4
+    const w = word.toLowerCase()
+    if (title.includes(w)) score += 15
+    if (symptoms.includes(w)) score += 8
+    if (causes.includes(w)) score += 6
+    if (steps.includes(w)) score += 4
+    if (tagText.includes(w)) score += 12
   })
 
-  // 4. Word proximity bonus
   if (isMultiWord && words.length === 2) {
-    const [word1, word2] = words.map((w: string) => w.toLowerCase())
+    const [word1, word2] = words.map((w) => w.toLowerCase())
     const titleWords = title.split(/\s+/)
-    const word1Index = titleWords.findIndex((w: string) => w.includes(word1))
-    const word2Index = titleWords.findIndex((w: string) => w.includes(word2))
-    if (word1Index >= 0 && word2Index >= 0 && Math.abs(word1Index - word2Index) < 10) {
-      score += 20
-    }
+    const i1 = titleWords.findIndex((w) => w.includes(word1))
+    const i2 = titleWords.findIndex((w) => w.includes(word2))
+    if (i1 >= 0 && i2 >= 0 && Math.abs(i1 - i2) < 10) score += 20
   }
 
   return score
 }
 
-// Synonym mapping function
 function expandSearchWithSynonyms(term: string): string[] {
   const synonyms: { [key: string]: string[] } = {
     'line': ['wire', 'cable', 'rope'],
@@ -321,9 +250,7 @@ function expandSearchWithSynonyms(term: string): string[] {
       synonyms[key].forEach((syn) => {
         terms.add(syn)
         const replaced = lowerTerm.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), syn)
-        if (replaced !== lowerTerm) {
-          terms.add(replaced)
-        }
+        if (replaced !== lowerTerm) terms.add(replaced)
       })
     }
   })
@@ -333,9 +260,7 @@ function expandSearchWithSynonyms(term: string): string[] {
       synonyms[word].forEach((syn) => {
         terms.add(syn)
         const replaced = lowerTerm.replace(new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), syn)
-        if (replaced !== lowerTerm) {
-          terms.add(replaced)
-        }
+        if (replaced !== lowerTerm) terms.add(replaced)
       })
     }
   })

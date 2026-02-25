@@ -1,28 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-
-interface Article {
-  id?: string
-  title: string
-  category: string
-  tags: string
-  symptoms: string
-  causes: string
-  steps: string
-  videoUrl: string
-  videoEmbed: string
-  published: boolean
-  order: number
-}
+import { articles as allArticles, Article } from '@/lib/articles'
 
 export default function AdminPage() {
-  const [articles, setArticles] = useState<Article[]>([])
-  const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Article>({
+  const [formData, setFormData] = useState({
     title: '',
     category: 'feature-not-working',
     tags: '',
@@ -35,106 +20,26 @@ export default function AdminPage() {
     order: 0,
   })
 
-  useEffect(() => {
-    loadArticles()
-  }, [])
-
-  const loadArticles = async () => {
-    try {
-      const res = await fetch('/api/admin/articles')
-      const data = await res.json()
-      if (data.articles) {
-        setArticles(data.articles)
-      }
-    } catch (error) {
-      console.error('Error loading articles:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    try {
-      const method = editingId ? 'PUT' : 'POST'
-
-      const res = await fetch('/api/admin/articles', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...(editingId ? { id: editingId } : {}),
-          ...formData,
-          tags: formData.tags ? JSON.stringify(formData.tags.split(',').map((t) => t.trim())) : null,
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.json()
-        alert(error.error || 'Failed to save article')
-        return
-      }
-
-      await loadArticles()
-      setEditingId(null)
-      setFormData({
-        title: '',
-        category: 'feature-not-working',
-        tags: '',
-        symptoms: '',
-        causes: '',
-        steps: '',
-        videoUrl: '',
-        videoEmbed: '',
-        published: true,
-        order: 0,
-      })
-    } catch (error) {
-      console.error('Error saving article:', error)
-      alert('An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEdit = (article: any) => {
+  const handleEdit = (article: Article) => {
     setEditingId(article.id)
     setFormData({
       title: article.title,
       category: article.category,
-      tags: article.tags ? JSON.parse(article.tags).join(', ') : '',
-      symptoms: article.symptoms || '',
-      causes: article.causes || '',
+      tags: article.tags.join(', '),
+      symptoms: article.symptoms,
+      causes: article.causes,
       steps: article.steps,
       videoUrl: article.videoUrl || '',
       videoEmbed: article.videoEmbed || '',
       published: article.published,
-      order: article.order || 0,
+      order: article.order,
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article?')) return
-
-    try {
-      const res = await fetch('/api/admin/articles', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-
-      if (!res.ok) {
-        alert('Failed to delete article')
-        return
-      }
-
-      await loadArticles()
-    } catch (error) {
-      console.error('Error deleting article:', error)
-      alert('An error occurred')
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    alert('Article editing will be available when a database is connected. Currently articles are managed in code.')
   }
 
   return (
@@ -148,7 +53,10 @@ export default function AdminPage() {
             </Link>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin - Manage Articles</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin - Manage Articles</h1>
+          <p className="text-gray-500 mb-8 text-sm">
+            View and preview article editing. Full CRUD will be enabled when a database is connected.
+          </p>
 
           {/* Form */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
@@ -178,8 +86,8 @@ export default function AdminPage() {
                     <option value="feature-not-working">Feature Not Working</option>
                     <option value="setup-installation">Setup / Installation</option>
                     <option value="performance-reliability">Performance / Reliability</option>
+                    <option value="maintenance">Maintenance</option>
                     <option value="account-access">Account &amp; Access</option>
-                    <option value="billing-subscription">Billing / Subscription</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -276,10 +184,9 @@ export default function AdminPage() {
               <div className="flex gap-4">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors font-medium"
+                  className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors font-medium"
                 >
-                  {loading ? 'Saving...' : editingId ? 'Update Article' : 'Create Article'}
+                  {editingId ? 'Update Article' : 'Create Article'}
                 </button>
                 {editingId && (
                   <button
@@ -310,15 +217,19 @@ export default function AdminPage() {
 
           {/* Articles List */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <h2 className="text-xl font-semibold text-gray-900 p-6 border-b">All Articles</h2>
+            <h2 className="text-xl font-semibold text-gray-900 p-6 border-b">
+              All Articles ({allArticles.length})
+            </h2>
             <div className="divide-y">
-              {articles.map((article: any) => (
+              {allArticles
+                .sort((a, b) => a.order - b.order)
+                .map((article) => (
                 <div key={article.id} className="p-6 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
                       <p className="text-sm text-gray-500 mb-2">{article.category}</p>
-                      <div className="flex gap-2 text-xs">
+                      <div className="flex gap-2 text-xs flex-wrap">
                         <span className={`px-2 py-1 rounded ${article.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                           {article.published ? 'Published' : 'Draft'}
                         </span>
@@ -330,6 +241,11 @@ export default function AdminPage() {
                             Has Video
                           </span>
                         )}
+                        {article.tags.map((tag) => (
+                          <span key={tag} className="px-2 py-1 rounded bg-gray-50 text-gray-600 border border-gray-200">
+                            {tag}
+                          </span>
+                        ))}
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4">
@@ -338,12 +254,6 @@ export default function AdminPage() {
                         className="px-4 py-2 text-sm bg-accent text-white rounded hover:bg-accent-hover transition-colors font-medium"
                       >
                         Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(article.id)}
-                        className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
-                      >
-                        Delete
                       </button>
                     </div>
                   </div>

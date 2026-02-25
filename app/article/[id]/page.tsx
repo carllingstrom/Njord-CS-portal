@@ -1,27 +1,22 @@
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import { getArticleById, getPublishedArticles } from '@/lib/articles'
 
-export const dynamic = 'force-dynamic'
+export function generateStaticParams() {
+  return getPublishedArticles().map((article) => ({ id: article.id }))
+}
 
 export default async function ArticlePage({
   params,
 }: {
   params: { id: string }
 }) {
-  const article = await prisma.kBArticle.findFirst({
-    where: {
-      id: params.id,
-      published: true,
-    },
-  })
+  const article = getArticleById(params.id)
 
   if (!article) {
     notFound()
   }
-
-  const tags = article.tags ? JSON.parse(article.tags) : []
 
   return (
     <>
@@ -44,7 +39,7 @@ export default async function ArticlePage({
 
               <div className="flex items-center gap-2 mb-8 flex-wrap">
                 <span className="bg-njord-pale text-njord-dark px-3 py-1.5 rounded-lg text-sm font-medium">{article.category}</span>
-                {tags.map((tag: string) => (
+                {article.tags.map((tag) => (
                   <span key={tag} className="bg-accent-pale text-accent-hover px-3 py-1.5 rounded-lg text-sm font-medium">
                     {tag}
                   </span>
@@ -91,4 +86,3 @@ export default async function ArticlePage({
     </>
   )
 }
-

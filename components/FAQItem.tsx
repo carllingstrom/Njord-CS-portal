@@ -11,13 +11,17 @@ interface FAQItemProps {
     steps: string
     videoUrl?: string | null
     videoEmbed?: string | null
-    tags?: string | null
+    tags?: string[] | string | null
   }
 }
 
 export default function FAQItem({ article }: FAQItemProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const tags = article.tags ? JSON.parse(article.tags) : []
+  const tags: string[] = Array.isArray(article.tags)
+    ? article.tags
+    : article.tags
+      ? JSON.parse(article.tags)
+      : []
 
   // Extract YouTube video ID from URL if it's a YouTube link
   const getYouTubeEmbedUrl = (url: string | null | undefined): string | null => {
