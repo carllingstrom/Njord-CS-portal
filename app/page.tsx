@@ -3,6 +3,8 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import FAQItem from '@/components/FAQItem'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage({
   searchParams,
 }: {
