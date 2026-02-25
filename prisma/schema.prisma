@@ -6,14 +6,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Note: SQLite doesn't support enums, so we use String fields with validation in the app layer
-// Valid UserRole values: CUSTOMER_USER, CUSTOMER_ADMIN, INTERNAL_ADMIN
-// Valid TicketStatus values: OPEN, IN_PROGRESS, RESOLVED, CLOSED
-// Valid TicketSeverity values: LOW, MEDIUM, HIGH
 
 model Organization {
   id                  String   @id @default(cuid())
